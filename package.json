@@ -1,6 +1,6 @@
 {
   "name": "dygnsauktion-backend",
-  "version": "1.0.0",
+  "version": "0.0.1",
   "description": "Backend for Dygnsauktion",
   "main": "src/server.js",
   "scripts": {
