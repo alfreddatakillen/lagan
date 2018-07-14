@@ -1,15 +1,13 @@
 {
-  "name": "dygnsauktion-backend",
+  "name": "lagan",
   "version": "0.0.1",
-  "description": "Backend for Dygnsauktion",
-  "main": "src/server.js",
+  "description": "Simple module for CQRS and event sourced state handling",
+  "main": "index.js",
   "scripts": {
-    "start": "node src/server.js",
     "test": "NODE_ENV=test node_modules/.bin/mocha test/**/*.js"
   },
   "author": "Alfred Godoy <alfred@nurd.nu>",
   "license": "(ISC OR GPL-3.0)",
-  "private": true,
   "dependencies": {
     "xstreem": "^2.1.0"
   },
