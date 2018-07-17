@@ -89,7 +89,7 @@ function lagan({ initialState = {}, logFile, position = 0 }) {
     return {
         event,
         get initialState() {
-            return initialState;
+            return deepClone(initialState);
         },
         get logFile() {
             return eventstream.filename;
