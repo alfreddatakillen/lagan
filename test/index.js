@@ -24,6 +24,16 @@ describe('lagan()', () => {
         expect(l.state).to.deep.equal(initialState);
     });
 
+    it('should expose (a clone of) the initial state', () => {
+        const initialState = { monkeys: 5, doneys: 3, bonkeys: [ 5, 6, { whut: 'yes', what: [ 4, 3, 2 ] } ] };
+
+        const l = lagan({ initialState });
+        after(() => l.stop());
+
+        expect(l.initialState).to.not.equal(initialState);
+        expect(l.initialState).to.deep.equal(initialState);
+    });
+
     it('should have an empty object as initial state, if not specified', () => {
         const l = lagan({});
         after(() => l.stop());

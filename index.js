@@ -14,13 +14,15 @@ function lagan({ initialState = {}, logFile, position = 0 }) {
 
     const events = {};
     const listeners = {};
+
+    initialState = deepClone(initialState);
     let state = deepClone(initialState);
 
     function eventHandler(pos, event, meta) {
 
         if (pos !== position) {
             // Maybe silly to check for this. It just should never happen.
-            throw new Error('Major internal error: Events arrives i n wrong order.')
+            throw new Error('Major internal error: Events arrives in wrong order.')
         }
 
         const responseId = [meta.checksum, meta.host, meta.pid, meta.nonce, meta.time].join('-');
@@ -86,6 +88,9 @@ function lagan({ initialState = {}, logFile, position = 0 }) {
 
     return {
         event,
+        get initialState() {
+            return initialState;
+        },
         get logFile() {
             return eventstream.filename;
         },
