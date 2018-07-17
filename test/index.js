@@ -8,7 +8,7 @@ describe('lagan()', () => {
         after(() => l.stop());
 
         expect(l).to.be.an('object');
-        expect(l.command).to.be.a('function');
+        expect(l.event).to.be.a('function');
         expect(l.registerEvent).to.be.a('function');
         expect(l.stop).to.be.a('function');
         expect(l.logFile).to.be.a('string');
@@ -70,19 +70,18 @@ describe('lagan()', () => {
             });
 
             function addUser(props) {
-                return l0.command(state => {
-                    return {
-                        event: 'userAdded',
+                return l0.event(
+                    'userAdded',
+                    {
                         name: props.name
-                    };
-                });
-                return state;
+                    }
+                )
             }
 
             return Promise.all([
-                addUser({ name: 'John Doe' }),
-                addUser({ name: 'John Norum' }),
-                addUser({ name: 'John Moe' }),
+                addUser({ name: 'John Doe' }).apply(),
+                addUser({ name: 'John Norum' }).apply(),
+                addUser({ name: 'John Moe' }).apply(),
                 promise0,
                 promise1,
                 promise2
@@ -103,39 +102,22 @@ describe('lagan()', () => {
             const l = lagan({ initialState });
             after(() => l.stop());
             function addUser(props) {
-                return l.command(state => {
-                    return {
-                        event: 'userAdded',
+                return l.event(
+                    'userAdded',
+                    {
                         name: props.name,
                         email: props.email
-                    };
-                });
+                    }
+                );
             }
             l.registerEvent('userAdded', (props, state) => {
                 return { ...state, users: [ ...state.users, { name: props.name, email: props.email } ] };
             });
-            return addUser({ name: 'John Doe', email: 'john@example.org' })
+            return addUser({ name: 'John Doe', email: 'john@example.org' }).apply()
                 .then(() => {
                     expect(l.state).to.deep.equal({
                         users: [ { name: 'John Doe', email: 'john@example.org' } ]
                     });
-                });
-        });
-
-        it('should return a Promise which rejects if there is a throw in the command function', () => {
-            const errMsg = 'New user registration is deactivated.';
-            const initialState = {};
-            const l = lagan({ initialState });
-            after(() => l.stop());
-            function addUser(props) {
-                return l.command(state => {
-                    throw new Error(errMsg);
-                });
-            }
-            return addUser()
-                .catch(err => err)
-                .then(err => {
-                    expect(err.message).to.equal(errMsg);  
                 });
         });
 
@@ -144,13 +126,14 @@ describe('lagan()', () => {
             const l = lagan({ initialState });
             after(() => l.stop());
             function addUser(props) {
-                return l.command(state => {
-                    return {
+                return l.event(
+                    'userAdded',
+                    {
                         event: 'userAdded',
                         name: props.name,
                         email: props.email
-                    };
-                });
+                    }
+                );
             }
             l.registerEvent('userAdded', (props, state) => {
                 if (state.users.filter(user => user.email === props.email).length > 0) {
@@ -158,7 +141,7 @@ describe('lagan()', () => {
                 }
                 return { ...state, users: [ ...state.users, { name: props.name, email: props.email } ] };
             });
-            return addUser({ name: 'John Doe', email: 'john@example.org' })
+            return addUser({ name: 'John Doe', email: 'john@example.org' }).apply()
                 .catch(err => err)
                 .then(err => {
                     expect(err.message).to.equal('Duplicate email address.');

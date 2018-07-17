@@ -25,7 +25,7 @@ function lagan({ initialState = {}, logFile, position = 0 }) {
 
         const responseId = [meta.checksum, meta.host, meta.pid, meta.nonce, meta.time].join('-');
 
-        if (typeof events[event.event] === 'undefined') {
+        if (typeof events[event.type] === 'undefined') {
             if (typeof listeners[responseId] !== 'undefined') {
                 listeners[responseId](new Error('No projector registered for this kind of event.'));
             }
@@ -34,7 +34,7 @@ function lagan({ initialState = {}, logFile, position = 0 }) {
         }
 
         try {
-            state = deepClone(events[event.event](event, deepClone(state)));
+            state = deepClone(events[event.type](event.props, deepClone(state)));
         } catch (err) {
             if (typeof listeners[responseId] !== 'undefined') {
                 listeners[responseId](err);
@@ -52,21 +52,27 @@ function lagan({ initialState = {}, logFile, position = 0 }) {
 
     eventstream.listen(position, eventHandler);
 
-    function command(cb) {
-        return new Promise((resolve, reject) => resolve())
-            .then(() => cb(state))
-            .then(event => {
-                let resolve, reject;
-                const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
-                const meta = eventstream.add(event, { returnMeta: true });
-                const responseId = [meta.checksum, meta.host, meta.pid, meta.nonce, meta.time].join('-');
-                listeners[responseId] = (err) => {
-                    delete listeners[responseId];
-                    if (err) reject(err);
-                    resolve();
-                };
-                return promise;
-            });
+    function event(type, props) {
+        return {
+            apply: () => {
+                const event = { type, props: deepClone(props) };
+                return new Promise((resolve, reject) => resolve())
+                .then(() => {
+                    let resolve, reject;
+                    const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+                    const meta = eventstream.add(event, { returnMeta: true });
+                    const responseId = [meta.checksum, meta.host, meta.pid, meta.nonce, meta.time].join('-');
+                    listeners[responseId] = (err) => {
+                        delete listeners[responseId];
+                        if (err) reject(err);
+                        resolve();
+                    };
+                    return promise;
+                });
+            },
+            type,
+            props: deepClone(props)
+        }
     };
 
     function registerEvent(eventType, projectorFn) {
@@ -79,7 +85,7 @@ function lagan({ initialState = {}, logFile, position = 0 }) {
     }
 
     return {
-        command,
+        event,
         get logFile() {
             return eventstream.filename;
         },

@@ -15,26 +15,27 @@ const lagan = require('lagan')(laganOptions);
 
 // Command function:
 
-function signupUser(props) {
-    return lagan.command(state => {
+function signupUser(name, email) {
 
-        // Some validation:
+    // Some validation:
 
-        if (typeof props.name !== 'string') throw new Error('Invalid name.');
+    if (typeof name !== 'string') throw new Error('Invalid name.');
 
-        const email = props.email.toLowerCase().trim();
-        if (!email.match(/^[^@]+@[^@]$/)) throw new Error('Invalid email.');
+    email = email.toLowerCase().trim();
+    if (!email.match(/^[^@]+@[^@]$/)) throw new Error('Invalid email.');
 
+    if (lagan.state.users.filter(user => user.email === email).lenght > 0)
+        throw new Error('Subscriber already in database.');
 
-        if (state.users.filter(user => user.email === props.email).lenght > 0)
-            throw new Error('Subscriber already in database.');
+    // Then create the event:
 
-        return {
-            event: 'userSignedUp',
-            name: props.name,
-            email: props.email
-        };
-    });
+    return lagan.event(
+        'userSignedUp',
+        {
+            name,
+            email
+        }
+    );
 }
 
 // Projection function
@@ -51,7 +52,7 @@ lagan.registerEvent('userSignedUp', (props, state) => {
 
 // Now, we can use the command:
 
-signupUser({ name: 'John Doe', email: 'john@example.org' })
+signupUser('John Doe', 'john@example.org').apply()
     .then(() => {
         console.log(lagan.state);
     })
