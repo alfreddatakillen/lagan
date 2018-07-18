@@ -7,11 +7,11 @@ Usage
 -----   
 
 ```
-const laganOptions = {
+const Lagan = require('lagan');
+const lagan = new Lagan({
     initialState: { users: [] },
     logFile: './my-data-storage.log'  // Path to persistent data storage file
-}
-const lagan = require('lagan')(laganOptions);
+});
 
 // Command function:
 

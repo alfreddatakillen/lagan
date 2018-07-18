@@ -1,24 +1,25 @@
 const expect = require('chai').expect;
-const lagan = require('../index');
+const Lagan = require('../index');
 
 describe('lagan()', () => {
 
     it('should return an object with functions and state', () => {
-        const l = lagan({});
+        const l = new Lagan({});
         after(() => l.stop());
 
         expect(l).to.be.an('object');
         expect(l.event).to.be.a('function');
-        expect(l.registerEvent).to.be.a('function');
-        expect(l.stop).to.be.a('function');
+        expect(l.initialState).to.be.an('object');
         expect(l.logFile).to.be.a('string');
+        expect(l.registerEvent).to.be.a('function');
         expect(l.state).to.be.an('object');
+        expect(l.stop).to.be.a('function');
     });
 
     it('should start with a state which is a clone of the initialState', () => {
         const initialState = { monkeys: 5, doneys: 3, bonkeys: [ 5, 6, { whut: 'yes', what: [ 4, 3, 2 ] } ] };
 
-        const l = lagan({ initialState });
+        const l = new Lagan({ initialState });
         after(() => l.stop());
 
         expect(l.state).to.deep.equal(initialState);
@@ -27,7 +28,7 @@ describe('lagan()', () => {
     it('should expose (a clone of) the initial state', () => {
         const initialState = { monkeys: 5, doneys: 3, bonkeys: [ 5, 6, { whut: 'yes', what: [ 4, 3, 2 ] } ] };
 
-        const l = lagan({ initialState });
+        const l = new Lagan({ initialState });
         after(() => l.stop());
 
         expect(l.initialState).to.not.equal(initialState);
@@ -35,7 +36,7 @@ describe('lagan()', () => {
     });
 
     it('should have an empty object as initial state, if not specified', () => {
-        const l = lagan({});
+        const l = new Lagan({});
         after(() => l.stop());
 
         expect(l.state).to.be.an('object');
@@ -46,9 +47,9 @@ describe('lagan()', () => {
         it('can be simultaneously read by multiple lagan instances', () => {
 
             // Using same storage file:
-            const l0 = lagan({ initialState: { users: [] }});
-            const l1 = lagan({ initialState: { users: [] }, logFile: l0.logFile });
-            const l2 = lagan({ initialState: { users: [] }, logFile: l0.logFile });
+            const l0 = new Lagan({ initialState: { users: [] }});
+            const l1 = new Lagan({ initialState: { users: [] }, logFile: l0.logFile });
+            const l2 = new Lagan({ initialState: { users: [] }, logFile: l0.logFile });
             after(() => {
                 l0.stop();
                 l1.stop();
@@ -109,7 +110,7 @@ describe('lagan()', () => {
 
         it('should return a Promise which resolves after event has projected on state', () => {
             const initialState = { users: [] };
-            const l = lagan({ initialState });
+            const l = new Lagan({ initialState });
             after(() => l.stop());
             function addUser(props) {
                 return l.event(
@@ -133,7 +134,7 @@ describe('lagan()', () => {
 
         it('should return a Promise which rejects if there is a throw in the projection function', () => {
             const initialState = { users: [ { name: 'John Norum', email: 'john@example.org' } ] };
-            const l = lagan({ initialState });
+            const l = new Lagan({ initialState });
             after(() => l.stop());
             function addUser(props) {
                 return l.event(
