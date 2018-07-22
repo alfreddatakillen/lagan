@@ -33,7 +33,7 @@ class Event {
             
             try {
                 if (typeof this.validate === 'function') {
-                    this.validate();
+                    this.validate(deepClone(this._lagan._state), null);
                 }
             } catch(error) {
                 this.error = error;
@@ -119,7 +119,7 @@ class Lagan extends EventEmitter {
 
         try {
             if (typeof eventObj.validate === 'function') {
-                eventObj.validate(deepClone(this._state));
+                eventObj.validate(deepClone(this._state), this.position);
             }
             
             this._state = deepClone(eventObj.project(deepClone(this._state)));
@@ -170,6 +170,5 @@ class Lagan extends EventEmitter {
     }
 
 } 
-
 
 module.exports = Lagan;

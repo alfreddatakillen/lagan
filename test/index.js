@@ -111,6 +111,39 @@ describe('lagan()', () => {
         });
     });
 
+    describe('verification', () => {
+
+        it('should run twice on a successful command, first without position number, and then with one', () => {
+            const initialState = { users: [] };
+            const l = new Lagan({ initialState });
+            after(() => l.stop());
+
+            const calls = [];
+
+            class UserAdded extends l.Event {
+                validate(state, position) {
+                    calls.push(position);
+                }
+                project(state) {
+                    return { ...state, users: [ ...state.users, { name: this.props.name, email: this.props.email } ] };
+                }
+            }
+
+            l.registerEvent(UserAdded);
+
+            function addUser(name, email) {
+                return new UserAdded({ name, email }).apply();
+            }
+
+
+            return addUser('John Doe', 'john@example.org')
+                .then(() => {
+                    expect(calls).to.deep.equal([ null, 0 ]);
+                });
+        });
+
+    });
+
     describe('command', () => {
 
         it('should return a Promise which resolves after event has projected on state', () => {
