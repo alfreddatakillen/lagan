@@ -13,41 +13,33 @@ const lagan = new Lagan({
     logFile: './my-data-storage.log'  // Path to persistent data storage file
 });
 
-// Command function:
+// Event class:
 
-function signupUser(name, email) {
+class UserSignedUp extends lagan.Event {
 
-    // Some validation:
+    validate() {
+        if (typeof this.props.name !== 'string') throw new Error('Invalid name.');
 
-    if (typeof name !== 'string') throw new Error('Invalid name.');
+        email = this.props.email.toLowerCase().trim();
+        if (!this.props.email.match(/^[^@]+@[^@]$/)) throw new Error('Invalid email.');
 
-    email = email.toLowerCase().trim();
-    if (!email.match(/^[^@]+@[^@]$/)) throw new Error('Invalid email.');
+        if (lagan.state.users.filter(user => user.email === this.props.email).length > 0)
+            throw new Error('Subscriber already in database.');
+    }
 
-    if (lagan.state.users.filter(user => user.email === email).lenght > 0)
-        throw new Error('Subscriber already in database.');
-
-    // Then create the event:
-
-    return lagan.event(
-        'userSignedUp',
-        {
-            name,
-            email
-        }
-    );
+    project(state) {
+        return { ...state, users: { ...state.users, { name: this.props.name } } };
+    }
 }
 
-// Projection function
+lagan.registerEvent(UserSignedUp);
 
-lagan.registerEvent('userSignedUp', (props, state) => {
-    
-    // Some validation:
-    if (state.users.filter(user => user.email === props.email).length > 0)
-        throw new Error('Subscriber already in database.');
 
-    return { ...state, users: { ...state.users, { name: props.name } } };
-});
+// Command function:
+
+function signUpUser(user, email) {
+    return new UserSignedUp({ user, email }).apply();
+}
 
 
 // Now, we can use the command:
