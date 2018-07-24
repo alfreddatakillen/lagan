@@ -10,7 +10,9 @@ function deepClone(obj) {
 }
 
 class Event {
+    
     constructor() {}
+    
     init(props, position) {
         this._props = deepClone(props);
         if (typeof position !== 'undefined') {
@@ -20,43 +22,44 @@ class Event {
         }
         this.error = null;
     }
+    
     get position() { return this._position; };
+    
     get props() { return deepClone(this._props); };
+    
     get type() { return this.constructor.name; };
+
     apply () {
         const event = { type: this.type, props: this.props };
 
-        return new Promise((resolve, reject) => resolve())
-        .then(() => {
-            let resolve, reject;
-            const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
-            
-            try {
-                if (typeof this.validate === 'function') {
-                    this.validate(deepClone(this._lagan._state), null);
-                }
-            } catch(error) {
+        let resolve, reject;
+        const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+        
+        try {
+            if (typeof this.validate === 'function') {
+                this.validate(deepClone(this._lagan._state), null);
+            }
+        } catch(error) {
+            this.error = error;
+            this._lagan.emit('failedPreValidation', event);
+            reject(error);
+            return promise;
+        }
+
+        const meta = this._lagan._eventstream.add(event, { returnMeta: true });
+        const responseId = [meta.checksum, meta.host, meta.pid, meta.nonce, meta.time].join('-');
+        this._lagan._listeners[responseId] = (error, event) => {
+            delete this._lagan._listeners[responseId];
+            if (error) {
                 this.error = error;
-                this._lagan.emit('failedPreValidation', event);
+                this._lagan.emit('failedProjection', event);
                 reject(error);
                 return;
             }
-
-            const meta = this._lagan._eventstream.add(event, { returnMeta: true });
-            const responseId = [meta.checksum, meta.host, meta.pid, meta.nonce, meta.time].join('-');
-            this._lagan._listeners[responseId] = (error, event) => {
-                delete this._lagan._listeners[responseId];
-                if (error) {
-                    this.error = error;
-                    this._lagan.emit('failedProjection', event);
-                    reject(error);
-                    return;
-                }
-                this._lagan.emit('successfulProjection', event);
-                resolve();
-            };
-            return promise;
-        });
+            this._lagan.emit('successfulProjection', event);
+            resolve();
+        };
+        return promise;
     }
 
     toString() {
@@ -69,8 +72,9 @@ class Event {
         }
         return JSON.stringify(obj);
     }
+
 };
-const eventParentObj = new Event();
+const eventParent = new Event();
 
 class Lagan extends EventEmitter {
 
@@ -92,10 +96,13 @@ class Lagan extends EventEmitter {
 
         const lagan = this;
         this.Event = function (props, position) {
+            if (typeof props === 'undefined') {
+                props = {};
+            }
             this._lagan = lagan;
             this.init(props, position);
         }
-        this.Event.prototype = eventParentObj;
+        this.Event.prototype = eventParent;
     }
 
     _eventHandler(pos, event, meta) {
