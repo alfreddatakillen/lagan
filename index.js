@@ -1,31 +1,19 @@
 const EventEmitter = require('events').EventEmitter;
 const XStreem = require('xstreem');
 
-function deepClone(obj) {
-    try {
-        return JSON.parse(JSON.stringify(obj));
-    } catch (err) {
-        throw new Error('Not JSON stringable value: ' + obj)
-    }
-}
-
 class Event {
     
     constructor() {}
     
     init(props, position) {
-        this._props = deepClone(props);
+        this.props = props;
         if (typeof position !== 'undefined') {
-            this._position = position;
+            this.position = position;
         } else {
-            this._position = null;
+            this.position = null;
         }
         this.error = null;
     }
-    
-    get position() { return this._position; };
-    
-    get props() { return deepClone(this._props); };
     
     get type() { return this.constructor.name; };
 
@@ -37,7 +25,7 @@ class Event {
         
         try {
             if (typeof this.validate === 'function') {
-                this.validate(deepClone(this._lagan._state), null);
+                this.validate(this._lagan.state, null);
             }
         } catch(error) {
             this.error = error;
@@ -67,8 +55,8 @@ class Event {
             type: this.type,
             props: this._props
         }
-        if (typeof this._position === 'number') {
-            obj.position = this._position;
+        if (typeof this.position === 'number') {
+            obj.position = this.position;
         }
         return JSON.stringify(obj);
     }
@@ -86,13 +74,13 @@ class Lagan extends EventEmitter {
         this._events = {};
         this._listeners = {};
 
-        this._initialState = deepClone(initialState);
-        this._state = deepClone(initialState);
+        this.initialState = initialState;
+        this.state = initialState;
 
-        this._position = position;
+        this.position = position;
 
         this._listener = (...args) => this._eventHandler(...args);
-        this._eventstream.listen(this._position, this._listener);
+        this._eventstream.listen(this.position, this._listener);
 
         const lagan = this;
         this.Event = function (props, position) {
@@ -107,7 +95,7 @@ class Lagan extends EventEmitter {
 
     _eventHandler(pos, event, meta) {
 
-        if (pos !== this._position) {
+        if (pos !== this.position) {
             // Maybe silly to check for this. It just should never happen.
             throw new Error('Major internal error: Events arrives in wrong order.')
         }
@@ -118,25 +106,25 @@ class Lagan extends EventEmitter {
             if (typeof this._listeners[responseId] !== 'undefined') {
                 this._listeners[responseId](new Error('No event class registered with name: ' + event.type));
             }
-            this._position++;
+            this.position++;
             return;
         }
 
-        const eventObj = new this._events[event.type](deepClone(event.props, this._position));
+        const eventObj = new this._events[event.type](event.props, this.position);
 
         try {
             if (typeof eventObj.validate === 'function') {
-                eventObj.validate(deepClone(this._state), this.position);
+                eventObj.validate(this.state, this.position);
             }
             
-            this._state = deepClone(eventObj.project(deepClone(this._state)));
+            this.state = eventObj.project(this.state);
 
         } catch (err) {
             if (typeof this._listeners[responseId] !== 'undefined') {
                 event.error = err;
                 this._listeners[responseId](err, eventObj);
             }
-            this._position++;
+            this.position++;
 
             return;
         }
@@ -146,7 +134,7 @@ class Lagan extends EventEmitter {
             this._listeners[responseId](null, eventObj);
         }
 
-        this._position++;
+        this.position++;
     }
 
     registerEvent(EventClass) {
@@ -160,20 +148,8 @@ class Lagan extends EventEmitter {
         this._eventstream.removeListener(this._listener);
     }
 
-    get initialState() {
-        return deepClone(this._initialState);
-    }
-
     get logFile() {
         return this._eventstream.filename;
-    }
-
-    get position() {
-        return this._position;
-    }
-
-    get state() {
-        return deepClone(this._state);
     }
 
 } 
