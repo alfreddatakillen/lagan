@@ -173,6 +173,40 @@ describe('lagan()', () => {
                 });
         });
 
+        it('should handle async projections properly, waiting for promises to resolve/reject until next event is handled', function() {
+            this.timeout(20000);
+
+            const initialState = { sentence: '' };
+            const l = new Lagan({ initialState });
+            after(() => l.stop());
+
+            class LetterAdded extends l.Event {
+                validate() {
+                }
+                project(state) {
+                    return new Promise((resolve, reject) => {
+                        setTimeout(resolve, Math.floor(Math.random() * 100));
+                    })
+                        .then(() => {
+                            return { sentence: state.sentence + this.props.letter };
+                        });
+                }
+            }
+            l.registerEvent(LetterAdded);
+
+            function addLetter(letter) {
+                return new LetterAdded({ letter }).apply();
+            }
+
+            const sentence = 'When seagulls follow the trawler it is because they think sardines will be thrown into the sea.';
+        
+            const promises = sentence.split('').reduce((acc, char) => { acc.push(addLetter(char)); return acc; }, []);
+            return Promise.all(promises)
+                .then(() => {
+                    expect(l.state.sentence).to.equal(sentence);
+                })
+        });
+
         it('should return a Promise which rejects if there is a throw in the projection function', () => {
             const initialState = { users: [ { name: 'John Norum', email: 'john@example.org' } ] };
             const l = new Lagan({ initialState });

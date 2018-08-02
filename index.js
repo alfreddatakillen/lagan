@@ -112,16 +112,17 @@ class Lagan extends EventEmitter {
 
         const eventObj = new this._events[event.type](event.props, this.position);
 
+        let result;
         try {
             if (typeof eventObj.validate === 'function') {
                 eventObj.validate(this.state, this.position);
             }
             
-            this.state = eventObj.project(this.state);
+            result = eventObj.project(this.state);
 
         } catch (err) {
             if (typeof this._listeners[responseId] !== 'undefined') {
-                event.error = err;
+                eventObj.error = err;
                 this._listeners[responseId](err, eventObj);
             }
             this.position++;
@@ -129,12 +130,36 @@ class Lagan extends EventEmitter {
             return;
         }
 
+        if (typeof result.then === 'function') {
+            this._eventstream.pause();
+            result.then(state => {
+                this._eventstream.resume();
+                this.state = state;
 
-        if (typeof this._listeners[responseId] !== 'undefined') {
-            this._listeners[responseId](null, eventObj);
+                if (typeof this._listeners[responseId] !== 'undefined') {
+                    this._listeners[responseId](null, eventObj);
+                }
+        
+                this.position++;
+            })
+            .catch(err => {
+                if (typeof this._listeners[responseId] !== 'undefined') {
+                    eventObj.error = err;
+                    this._listeners[responseId](err, eventObj);
+                }
+                this.position++;
+            });
+            
+        } else {
+            this.state = result;
+
+            if (typeof this._listeners[responseId] !== 'undefined') {
+                this._listeners[responseId](null, eventObj);
+            }
+    
+            this.position++;
         }
 
-        this.position++;
     }
 
     registerEvent(EventClass) {
