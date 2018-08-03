@@ -110,7 +110,7 @@ describe('lagan()', () => {
         });
     });
 
-    describe('verification', () => {
+    describe('validation', () => {
 
         it('should run twice on a successful command, first without position number, and then with one', () => {
             const initialState = { users: [] };
@@ -139,6 +139,147 @@ describe('lagan()', () => {
                 .then(() => {
                     expect(calls).to.deep.equal([ null, 0 ]);
                 });
+        });
+
+        it('should handle async validator functions', function() {
+
+            this.timeout(30000);
+
+            const initialState = { positions: [], sentence: '' };
+            const l = new Lagan({ initialState });
+            after(() => l.stop());
+
+            class SyncValidatorSyncProjector extends l.Event {
+                validate(state, position) {
+                    if (position === null && this.props.failFirst === true) throw new Error('First validation failed.');
+                    if (position !== null && this.props.failSecond === true) throw new Error('Second validation failed.');
+                }
+                project(state) {
+                    return { positions: [...state.positions, this.position], sentence: state.sentence + this.props.letter }
+                }
+            }
+
+            class SyncValidatorAsyncProjector extends l.Event {
+                validate(state, position) {
+                    if (position === null && this.props.failFirst === true) throw new Error('First validation failed.');
+                    if (position !== null && this.props.failSecond === true) throw new Error('Second validation failed.');
+                }
+                project(state) {
+                    return new Promise((resolve, reject) => setTimeout(resolve, Math.floor(Math.round() * 30)))
+                        .then(() => {
+                            return { positions: [...state.positions, this.position], sentence: state.sentence + this.props.letter }
+                        })
+                }
+            }
+
+            class AsyncValidatorSyncProjector extends l.Event {
+                validate(state, position) {
+                    return new Promise((resolve, reject) => {
+                        setTimeout(resolve, Math.floor(Math.round() * 30));
+                    })
+                        .then(() => {
+                            if (position === null && this.props.failFirst === true) throw new Error('First validation failed.');
+                            if (position !== null && this.props.failSecond === true) throw new Error('Second validation failed.');
+                        });
+                }
+                project(state) {
+                    return { positions: [...state.positions, this.position], sentence: state.sentence + this.props.letter }
+                }
+            }
+
+            class AsyncValidatorAsyncProjector extends l.Event {
+                validate(state, position) {
+                    return new Promise((resolve, reject) => {
+                        setTimeout(resolve, Math.floor(Math.round() * 30));
+                    })
+                        .then(() => {
+                            if (position === null && this.props.failFirst === true) throw new Error('First validation failed.');
+                            if (position !== null && this.props.failSecond === true) throw new Error('Second validation failed.');
+                        });
+                }
+                project(state) {
+                    return new Promise((resolve, reject) => setTimeout(resolve, Math.floor(Math.round() * 30)))
+                        .then(() => {
+                            return { positions: [...state.positions, this.position], sentence: state.sentence + this.props.letter }
+                        })
+                }
+            }
+
+            l.registerEvent(SyncValidatorSyncProjector);
+            l.registerEvent(SyncValidatorAsyncProjector);
+            l.registerEvent(AsyncValidatorSyncProjector);
+            l.registerEvent(AsyncValidatorAsyncProjector);
+
+            function addLetterSyncSync(letter, failFirst, failSecond) {
+                return new SyncValidatorSyncProjector({ letter, failFirst, failSecond }).apply();
+            }
+
+            function addLetterSyncAsync(letter, failFirst, failSecond) {
+                return new SyncValidatorAsyncProjector({ letter, failFirst, failSecond }).apply();
+            }
+
+            function addLetterAsyncSync(letter, failFirst, failSecond) {
+                return new AsyncValidatorSyncProjector({ letter, failFirst, failSecond }).apply();
+            }
+
+            function addLetterAsyncAsync(letter, failFirst, failSecond) {
+                return new AsyncValidatorAsyncProjector({ letter, failFirst, failSecond }).apply();
+            }
+
+            const sentence = 'When seagulls follow the trawler it is because they think sardines will be thrown into the sea.';
+        
+            const promise = sentence.split('').reduce((acc, char, index) => {
+                let action;
+                switch (index % 4) {
+                    case 0:
+                        action = addLetterSyncSync;
+                        break;
+                    case 1:
+                        action = addLetterSyncAsync;
+                        break;
+                    case 2:
+                        action = addLetterAsyncSync;
+                        break;
+                    case 3:
+                        action = addLetterAsyncAsync;
+                        break;
+                }
+                return acc.then(() => {
+                    return action(char, false, false);
+                })
+                    .then(() => {
+                        return action(char, true, false)
+                            .catch(err => {
+                                return err;
+                            })
+                            .then(err => {
+                                expect(err.message).to.equal('First validation failed.');
+                            });
+                    })
+                    .then(() => {
+                        return action(char, false, true)
+                            .catch(err => {
+                                return err;
+                            })
+                            .then(err => {
+                                expect(err.message).to.equal('Second validation failed.');
+                            });
+                    });
+            }, new Promise((resolve, reject) => resolve()));
+
+            return promise
+                .then(err => {
+                    l.state.positions.forEach(pos => {
+                        // We do three actions for each letter.
+                        // One will be successful.
+                        // One will fail in the first validation and hence never get a position number.
+                        // One will fail in the second validation and hence get a position number.
+                        // So, every second event actually adds something to the sentence:
+                        expect(pos % 2).to.equal(0);
+                    })
+                    expect(l.state.sentence).to.equal(sentence);
+                })
+
         });
 
     });
@@ -226,7 +367,6 @@ describe('lagan()', () => {
             function addUser(name, email) {
                 return new UserAdded({ name, email }).apply();
             }
-
 
             return addUser('John Doe', 'john@example.org')
                 .catch(err => err)

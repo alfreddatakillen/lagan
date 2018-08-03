@@ -23,9 +23,11 @@ class Event {
         let resolve, reject;
         const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
         
+        let validatorResult;
+
         try {
             if (typeof this.validate === 'function') {
-                this.validate(this._lagan.state, null);
+                validatorResult = this.validate(this._lagan.state, null);
             }
         } catch(error) {
             this.error = error;
@@ -34,20 +36,29 @@ class Event {
             return promise;
         }
 
-        const meta = this._lagan._eventstream.add(event, { returnMeta: true });
-        const responseId = [meta.checksum, meta.host, meta.pid, meta.nonce, meta.time].join('-');
-        this._lagan._listeners[responseId] = (error, event) => {
-            delete this._lagan._listeners[responseId];
-            if (error) {
-                this.error = error;
-                this._lagan.emit('failedProjection', event);
-                reject(error);
-                return;
-            }
-            this._lagan.emit('successfulProjection', event);
-            resolve();
-        };
-        return promise;
+        const postValidation = () => {
+            const meta = this._lagan._eventstream.add(event, { returnMeta: true });
+            const responseId = [meta.checksum, meta.host, meta.pid, meta.nonce, meta.time].join('-');
+            this._lagan._listeners[responseId] = (error, event) => {
+                delete this._lagan._listeners[responseId];
+                if (error) {
+                    this.error = error;
+                    this._lagan.emit('failedProjection', event);
+                    reject(error);
+                    return;
+                }
+                this._lagan.emit('successfulProjection', event);
+                resolve();
+            };
+            return promise;    
+        }
+
+        if (typeof validatorResult === 'object' && typeof validatorResult.then === 'function') {
+            return validatorResult
+                .then(postValidation);
+        } else {
+            return postValidation();
+        }
     }
 
     toString() {
@@ -112,14 +123,11 @@ class Lagan extends EventEmitter {
 
         const eventObj = new this._events[event.type](event.props, this.position);
 
-        let result;
+        let validationResult;
         try {
             if (typeof eventObj.validate === 'function') {
-                eventObj.validate(this.state, this.position);
+                validationResult = eventObj.validate(this.state, this.position);
             }
-            
-            result = eventObj.project(this.state);
-
         } catch (err) {
             if (typeof this._listeners[responseId] !== 'undefined') {
                 eventObj.error = err;
@@ -130,36 +138,78 @@ class Lagan extends EventEmitter {
             return;
         }
 
-        if (typeof result.then === 'function') {
-            this._eventstream.pause();
-            result.then(state => {
-                this._eventstream.resume();
-                this.state = state;
-
-                if (typeof this._listeners[responseId] !== 'undefined') {
-                    this._listeners[responseId](null, eventObj);
-                }
-        
-                this.position++;
-            })
-            .catch(err => {
+        const postValidation = () => {
+            let result;
+            
+            try {
+                result = eventObj.project(this.state, this.position);
+            } catch (err) {
                 if (typeof this._listeners[responseId] !== 'undefined') {
                     eventObj.error = err;
                     this._listeners[responseId](err, eventObj);
                 }
                 this.position++;
-            });
-            
-        } else {
-            this.state = result;
-
-            if (typeof this._listeners[responseId] !== 'undefined') {
-                this._listeners[responseId](null, eventObj);
-            }
     
-            this.position++;
-        }
+                return;
+            }
+            
+            if (typeof result === 'object' && typeof result.then === 'function') {
+                this._eventstream.pause();
+                result.then(state => {
+                    this._eventstream.resume();
+                    this.state = state;
+    
+                    if (typeof this._listeners[responseId] !== 'undefined') {
+                        this._listeners[responseId](null, eventObj);
+                    }
+            
+                    this.position++;
+                })
+                .catch(err => {
+                    if (typeof this._listeners[responseId] !== 'undefined') {
+                        eventObj.error = err;
+                        this._listeners[responseId](err, eventObj);
+                    }
+                    this.position++;
+                });
+    
+            } else {
+                this.state = result;
+    
+                if (typeof this._listeners[responseId] !== 'undefined') {
+                    this._listeners[responseId](null, eventObj);
+                }
+        
+                this.position++;
+            }
+        };
 
+        if (typeof validationResult === 'object' && typeof validationResult.then === 'function') {
+            this._eventstream.pause();
+
+            validationResult
+                .then(() => {
+                    return true; // successful validation
+                })
+                .catch((err) => {
+                    if (typeof this._listeners[responseId] !== 'undefined') {
+                        eventObj.error = err;
+                        this._listeners[responseId](err, eventObj);
+                    }
+                    this.position++;
+                    return false; // not successful validation
+                })
+                .then(successfulValidation => {
+                    this._eventstream.resume();
+                    if (successfulValidation) {
+                        postValidation();
+                    }
+                });
+        } else {
+
+            postValidation();
+
+        }
     }
 
     registerEvent(EventClass) {
