@@ -64,21 +64,21 @@ describe('lagan()', () => {
 
             class UserAdded0 extends l0.Event {
                 get type() { return 'UserAdded' }; // Override the class name (since it will differ for the different Lagan instances.)
-                project(state) {
+                project({ state }) {
                     if (this.props.name === 'John Moe') resolve0();
                     return { ...state, users: [ ...state.users, { name: this.props.name } ] };
                 }
             }
             class UserAdded1 extends l1.Event {
                 get type() { return 'UserAdded' }; // Override the class name (since it will differ for the different Lagan instances.)
-                project(state) {
+                project({ state }) {
                     if (this.props.name === 'John Moe') resolve1();
                     return { ...state, users: [ ...state.users, { name: this.props.name } ] };
                 }
             }
             class UserAdded2 extends l2.Event {
                 get type() { return 'UserAdded' }; // Override the class name (since it will differ for the different Lagan instances.)
-                project(state) {
+                project({ state }) {
                     if (this.props.name === 'John Moe') resolve2();
                     return { ...state, users: [ ...state.users, { name: this.props.name } ] };
                 }
@@ -120,10 +120,10 @@ describe('lagan()', () => {
             const calls = [];
 
             class UserAdded extends l.Event {
-                validate(state, position) {
+                validate({ state, position }) {
                     calls.push(position);
                 }
-                project(state) {
+                project({ state }) {
                     return { ...state, users: [ ...state.users, { name: this.props.name, email: this.props.email } ] };
                 }
             }
@@ -150,21 +150,21 @@ describe('lagan()', () => {
             after(() => l.stop());
 
             class SyncValidatorSyncProjector extends l.Event {
-                validate(state, position) {
+                validate({ state, position }) {
                     if (position === null && this.props.failFirst === true) throw new Error('First validation failed.');
                     if (position !== null && this.props.failSecond === true) throw new Error('Second validation failed.');
                 }
-                project(state) {
+                project({ state }) {
                     return { positions: [...state.positions, this.position], sentence: state.sentence + this.props.letter }
                 }
             }
 
             class SyncValidatorAsyncProjector extends l.Event {
-                validate(state, position) {
+                validate({ state, position }) {
                     if (position === null && this.props.failFirst === true) throw new Error('First validation failed.');
                     if (position !== null && this.props.failSecond === true) throw new Error('Second validation failed.');
                 }
-                project(state) {
+                project({ state }) {
                     return new Promise((resolve, reject) => setTimeout(resolve, Math.floor(Math.round() * 30)))
                         .then(() => {
                             return { positions: [...state.positions, this.position], sentence: state.sentence + this.props.letter }
@@ -173,7 +173,7 @@ describe('lagan()', () => {
             }
 
             class AsyncValidatorSyncProjector extends l.Event {
-                validate(state, position) {
+                validate({ state, position }) {
                     return new Promise((resolve, reject) => {
                         setTimeout(resolve, Math.floor(Math.round() * 30));
                     })
@@ -182,13 +182,13 @@ describe('lagan()', () => {
                             if (position !== null && this.props.failSecond === true) throw new Error('Second validation failed.');
                         });
                 }
-                project(state) {
-                    return { positions: [...state.positions, this.position], sentence: state.sentence + this.props.letter }
+                project({ state }) {
+                    return { positions: [...state.positions, this.position],sentence: state.sentence + this.props.letter }
                 }
             }
 
             class AsyncValidatorAsyncProjector extends l.Event {
-                validate(state, position) {
+                validate({ state, position }) {
                     return new Promise((resolve, reject) => {
                         setTimeout(resolve, Math.floor(Math.round() * 30));
                     })
@@ -197,7 +197,7 @@ describe('lagan()', () => {
                             if (position !== null && this.props.failSecond === true) throw new Error('Second validation failed.');
                         });
                 }
-                project(state) {
+                project({ state }) {
                     return new Promise((resolve, reject) => setTimeout(resolve, Math.floor(Math.round() * 30)))
                         .then(() => {
                             return { positions: [...state.positions, this.position], sentence: state.sentence + this.props.letter }
@@ -294,7 +294,7 @@ describe('lagan()', () => {
             class UserAdded extends l.Event {
                 validate() {
                 }
-                project(state) {
+                project({ state }) {
                     return { ...state, users: [ ...state.users, { name: this.props.name, email: this.props.email } ] };
                 }
             }
@@ -324,7 +324,7 @@ describe('lagan()', () => {
             class LetterAdded extends l.Event {
                 validate() {
                 }
-                project(state) {
+                project({ state }) {
                     return new Promise((resolve, reject) => {
                         setTimeout(resolve, Math.floor(Math.random() * 100));
                     })
@@ -355,9 +355,9 @@ describe('lagan()', () => {
 
 
             class UserAdded extends l.Event {
-                validate(state) {
+                validate({ state }) {
                 }
-                project(state) {
+                project({ state }) {
                     throw new Error('Some projection error.');
                 }
             }

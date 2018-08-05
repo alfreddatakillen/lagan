@@ -12,6 +12,7 @@ class Event {
         } else {
             this.position = null;
         }
+        this.state = this._lagan.state;
         this.error = null;
     }
     
@@ -27,7 +28,7 @@ class Event {
 
         try {
             if (typeof this.validate === 'function') {
-                validatorResult = this.validate(this._lagan.state, null);
+                validatorResult = this.validate({ state: this.state, position: null });
             }
         } catch(error) {
             this.error = error;
@@ -126,7 +127,7 @@ class Lagan extends EventEmitter {
         let validationResult;
         try {
             if (typeof eventObj.validate === 'function') {
-                validationResult = eventObj.validate(this.state, this.position);
+                validationResult = eventObj.validate({ state: this.state, position: this.position });
             }
         } catch (err) {
             if (typeof this._listeners[responseId] !== 'undefined') {
@@ -142,7 +143,7 @@ class Lagan extends EventEmitter {
             let result;
             
             try {
-                result = eventObj.project(this.state, this.position);
+                result = eventObj.project({ state: this.state, position: this.position });
             } catch (err) {
                 if (typeof this._listeners[responseId] !== 'undefined') {
                     eventObj.error = err;
@@ -157,7 +158,9 @@ class Lagan extends EventEmitter {
                 this._eventstream.pause();
                 result.then(state => {
                     this._eventstream.resume();
-                    this.state = state;
+                    if (typeof state !== 'undefined') {
+                        this.state = state;
+                    }
     
                     if (typeof this._listeners[responseId] !== 'undefined') {
                         this._listeners[responseId](null, eventObj);
@@ -174,7 +177,9 @@ class Lagan extends EventEmitter {
                 });
     
             } else {
-                this.state = result;
+                if (typeof result !== 'undefined') {
+                    this.state = result;
+                }
     
                 if (typeof this._listeners[responseId] !== 'undefined') {
                     this._listeners[responseId](null, eventObj);

@@ -1,35 +1,37 @@
 Lagan
 =====
 
-Simple module for CQRS and event sourced state handling in Node.js.
+Event sourcing and CQRS module for Node.js.
 
 
 Usage
 -----   
 
 ```
+// const database = your-database-layer;
+
 const Lagan = require('lagan');
 const lagan = new Lagan({
-    initialState: { users: [] },
     logFile: './my-data-storage.log'  // Path to persistent data storage file
 });
+
 
 // Event class:
 
 class UserSignedUp extends lagan.Event {
 
-    validate(state) {
+    validate() {
         if (typeof this.props.name !== 'string') throw new Error('Invalid name.');
 
         email = this.props.email.toLowerCase().trim();
         if (!this.props.email.match(/^[^@]+@[^@]$/)) throw new Error('Invalid email.');
 
-        if (state.users.filter(user => user.email === this.props.email).length > 0)
+        if (database.userExists(this.props.email))
             throw new Error('Subscriber already in database.');
     }
 
-    project(state) {
-        return { ...state, users: { ...state.users, { name: this.props.name } } };
+    project() {
+        database.addToUserTable(this.props.name, this.props.email);
     }
 }
 
@@ -38,16 +40,16 @@ lagan.registerEvent(UserSignedUp);
 
 // Command function:
 
-function signUpUser(user, email) {
-    return new UserSignedUp({ user, email }).apply();
+function signUpUser(name, email) {
+    return new UserSignedUp({ name, email }).apply();
 }
 
 
 // Now, we can use the command:
 
-signupUser('John Doe', 'john@example.org').apply()
+signupUser('John Doe', 'john@example.org')
     .then(() => {
-        console.log(lagan.state);
+        // Event successfully added to event stream, and projected to database.
     })
     .catch(err => {
         // Event was not created, or there was an error in validation/projection
@@ -56,11 +58,48 @@ signupUser('John Doe', 'john@example.org').apply()
 ```
 
 
+Using Lagan's state object
+--------------------------
+
+Your `.validate()` and `.project()` functions can use any state handler you like.
+
+If you want to just keep the application state in a Javascript object in memory, you can use Lagan's state object.
+
+Just instantiate Lagan with an `initialState` (which should be the state object before the first event has been projected):
+
+```
+const lagan = new Lagan({
+    initialState: { users: [] }
+});
+```
+
+Your `.validate()` and `.project()` functions will get a state object in the arguments object.
+What you return from the `.project()` function will be the new state after projection:
+
+```
+class UserSignedUp extends lagan.Event {
+
+    validate({ state }) {
+        if (state.users.filter(user => user.email === this.props.email).length > 0)
+            throw new Error('Subscriber already in database.');
+    }
+
+    project({ state }) {
+        return { ...state, users: { ...state.users, { name: this.props.name, email: this.props.email } } };
+    }
+
+}
+```
+
+It is good practice to use immutable coding pattern using spread operators in the projector.
+
+
+
 Validation
 ----------
 
 Validation is the process of checking that the event is properly formatted and
-valid before the event is added to the event stream.
+valid before it is added to the event stream.
 
 ### Synchronous or asynchronous
 
@@ -105,7 +144,7 @@ is `null`.
 ```
 class UserSignedUp extends lagan.Event {
 
-    validate(state, position) {
+    validate({ position }) {
         if (position === null) {
             // Pre-validation
         } else {
@@ -120,14 +159,11 @@ class UserSignedUp extends lagan.Event {
 ```
 
 
-
-Strong ordering guarantee
--------------------------
+Event ordering
+--------------
 
 Lagan guarantees that the event projection will be in the same order as you do `.apply()` on
-your event object, as long as your validate function is synchronous during pre-validation.
-
-
+your event objects, as long as your validate function is synchronous during pre-validation.
 
 
 
@@ -136,5 +172,3 @@ Curiosities
 
 This module got it's name from the river Lagan, which flows through Swedish hicksvilles like
 Vaggeryd, Ljungby and Alla Har En Ko I Värnamo.
-
-
