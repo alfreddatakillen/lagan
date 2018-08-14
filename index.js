@@ -78,18 +78,18 @@ const eventParent = new Event();
 
 class Lagan extends EventEmitter {
 
-    constructor({ initialState = {}, logFile, position = 0 }) {
+    constructor(opts = {}) {
 
         super();
-        
-        this._eventstream = new XStreem(logFile);
+
+        this._eventstream = new XStreem(opts.logFile);
         this._events = {};
         this._listeners = {};
 
-        this.initialState = initialState;
-        this.state = initialState;
+        this.initialState = opts.initialState || {};
+        this.state = this.initialState;
 
-        this.position = position;
+        this.position = opts.position || 0;
 
         this._listener = (...args) => this._eventHandler(...args);
         this._eventstream.listen(this.position, this._listener);
@@ -224,7 +224,7 @@ class Lagan extends EventEmitter {
         this._events[eventType] = EventClass;
     }
 
-    stop() {
+    close() {
         this._eventstream.removeListener(this._listener);
     }
 

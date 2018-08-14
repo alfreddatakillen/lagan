@@ -9,7 +9,7 @@
   "author": "Alfred Godoy <alfred@nurd.nu>",
   "license": "(ISC OR GPL-3.0)",
   "dependencies": {
-    "xstreem": "^2.2.0"
+    "xstreem": "^2.2.1"
   },
   "devDependencies": {
     "chai": "^4.1.2",

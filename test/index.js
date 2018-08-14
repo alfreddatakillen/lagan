@@ -5,21 +5,21 @@ describe('lagan()', () => {
 
     it('should return an object with functions and state', () => {
         const l = new Lagan({});
-        after(() => l.stop());
+        after(() => l.close());
 
         expect(l).to.be.an('object');
         expect(l.initialState).to.be.an('object');
         expect(l.logFile).to.be.a('string');
         expect(l.registerEvent).to.be.a('function');
         expect(l.state).to.be.an('object');
-        expect(l.stop).to.be.a('function');
+        expect(l.close).to.be.a('function');
     });
 
     it('should start with a state which is a clone of the initialState', () => {
         const initialState = { monkeys: 5, doneys: 3, bonkeys: [ 5, 6, { whut: 'yes', what: [ 4, 3, 2 ] } ] };
 
         const l = new Lagan({ initialState });
-        after(() => l.stop());
+        after(() => l.close());
 
         expect(l.state).to.deep.equal(initialState);
     });
@@ -28,14 +28,14 @@ describe('lagan()', () => {
         const initialState = { monkeys: 5, donkeys: 3, bonkeys: [ 5, 6, { whut: 'yes', what: [ 4, 3, 2 ] } ] };
 
         const l = new Lagan({ initialState });
-        after(() => l.stop());
+        after(() => l.close());
 
         expect(l.initialState).to.deep.equal(initialState);
     });
 
     it('should have an empty object as initial state, if not specified', () => {
         const l = new Lagan({});
-        after(() => l.stop());
+        after(() => l.close());
 
         expect(l.state).to.be.an('object');
         expect(l.state).to.deep.equal({});
@@ -52,9 +52,9 @@ describe('lagan()', () => {
             const l1 = new Lagan({ initialState, logFile: l0.logFile });
             const l2 = new Lagan({ initialState, logFile: l0.logFile });
             after(() => {
-                l0.stop();
-                l1.stop();
-                l2.stop();
+                l0.close();
+                l1.close();
+                l2.close();
             });
 
             let resolve0, resolve1, resolve2;
@@ -115,7 +115,7 @@ describe('lagan()', () => {
         it('should run twice on a successful command, first without position number, and then with one', () => {
             const initialState = { users: [] };
             const l = new Lagan({ initialState });
-            after(() => l.stop());
+            after(() => l.close());
 
             const calls = [];
 
@@ -147,7 +147,7 @@ describe('lagan()', () => {
 
             const initialState = { positions: [], sentence: '' };
             const l = new Lagan({ initialState });
-            after(() => l.stop());
+            after(() => l.close());
 
             class SyncValidatorSyncProjector extends l.Event {
                 validate({ state, position }) {
@@ -289,7 +289,7 @@ describe('lagan()', () => {
         it('should return a Promise which resolves after event has projected on state', () => {
             const initialState = { users: [] };
             const l = new Lagan({ initialState });
-            after(() => l.stop());
+            after(() => l.close());
 
             class UserAdded extends l.Event {
                 validate() {
@@ -319,7 +319,7 @@ describe('lagan()', () => {
 
             const initialState = { sentence: '' };
             const l = new Lagan({ initialState });
-            after(() => l.stop());
+            after(() => l.close());
 
             class LetterAdded extends l.Event {
                 validate() {
@@ -351,7 +351,7 @@ describe('lagan()', () => {
         it('should return a Promise which rejects if there is a throw in the projection function', () => {
             const initialState = { users: [ { name: 'John Norum', email: 'john@example.org' } ] };
             const l = new Lagan({ initialState });
-            after(() => l.stop());
+            after(() => l.close());
 
 
             class UserAdded extends l.Event {
