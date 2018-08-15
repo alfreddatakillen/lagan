@@ -19,8 +19,6 @@ class Event {
     get type() { return this.constructor.name; };
 
     apply () {
-        const event = { type: this.type, props: this.props };
-
         let resolve, reject;
         const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
         
@@ -32,7 +30,7 @@ class Event {
             }
         } catch(error) {
             this.error = error;
-            this._lagan.emit('failedPreValidation', event);
+            this._lagan.emit('failedPreValidation', this);
             reject(error);
             return promise;
         }
@@ -44,11 +42,9 @@ class Event {
                 delete this._lagan._listeners[responseId];
                 if (error) {
                     this.error = error;
-                    this._lagan.emit('failedProjection', event);
                     reject(error);
                     return;
                 }
-                this._lagan.emit('successfulProjection', event);
                 resolve();
             };
             return promise;    
@@ -130,10 +126,11 @@ class Lagan extends EventEmitter {
                 validationResult = eventObj.validate({ state: this.state, position: this.position });
             }
         } catch (err) {
+            eventObj.error = err;
             if (typeof this._listeners[responseId] !== 'undefined') {
-                eventObj.error = err;
                 this._listeners[responseId](err, eventObj);
             }
+            this.emit('failedPostValidation', eventObj);
             this.position++;
 
             return;
@@ -145,10 +142,11 @@ class Lagan extends EventEmitter {
             try {
                 result = eventObj.project({ state: this.state, position: this.position });
             } catch (err) {
+                eventObj.error = err;
                 if (typeof this._listeners[responseId] !== 'undefined') {
-                    eventObj.error = err;
                     this._listeners[responseId](err, eventObj);
                 }
+                this.emit('failedProjection', eventObj);
                 this.position++;
     
                 return;
@@ -160,11 +158,13 @@ class Lagan extends EventEmitter {
                     this._eventstream.resume();
                     if (typeof state !== 'undefined') {
                         this.state = state;
+                        eventObj.state = state; // Update eventObj's state from what it was before projection, to what it is after projection.
                     }
     
                     if (typeof this._listeners[responseId] !== 'undefined') {
                         this._listeners[responseId](null, eventObj);
                     }
+                    this.emit('successfulProjection', eventObj);
             
                     this.position++;
                 })
@@ -179,11 +179,14 @@ class Lagan extends EventEmitter {
             } else {
                 if (typeof result !== 'undefined') {
                     this.state = result;
+                    eventObj.state = result; // Update eventObj's state from what it was before projection, to what it is after projection.
                 }
     
                 if (typeof this._listeners[responseId] !== 'undefined') {
                     this._listeners[responseId](null, eventObj);
                 }
+                this.emit('successfulProjection', eventObj);
+
         
                 this.position++;
             }
