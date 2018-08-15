@@ -45,9 +45,9 @@ class Event {
                     reject(error);
                     return;
                 }
-                resolve();
+                resolve({ state: event.state, position: event.position });
             };
-            return promise;    
+            return promise;
         }
 
         if (typeof validatorResult === 'object' && typeof validatorResult.then === 'function') {
