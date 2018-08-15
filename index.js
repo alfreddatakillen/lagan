@@ -36,7 +36,7 @@ class Event {
         }
 
         const postValidation = () => {
-            const meta = this._lagan._eventstream.add(event, { returnMeta: true });
+            const meta = this._lagan._eventstream.add({ type: this.type, props: this.props }, { returnMeta: true });
             const responseId = [meta.checksum, meta.host, meta.pid, meta.nonce, meta.time].join('-');
             this._lagan._listeners[responseId] = (error, event) => {
                 delete this._lagan._listeners[responseId];
