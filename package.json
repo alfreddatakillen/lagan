@@ -1,6 +1,6 @@
 {
   "name": "lagan",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Simple module for CQRS and event sourced state handling",
   "main": "index.js",
   "scripts": {
