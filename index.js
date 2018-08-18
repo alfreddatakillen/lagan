@@ -45,7 +45,7 @@ class Event {
                     reject(error);
                     return;
                 }
-                resolve({ state: event.state, position: event.position });
+                resolve({ state: event.state, position: event.position, props: event.props });
             };
             return promise;
         }
