@@ -5,7 +5,7 @@ class Event {
     
     constructor() {}
     
-    init(props, position) {
+    init(props, position, meta) {
         this.props = props;
         if (typeof position !== 'undefined') {
             this.position = position;
@@ -14,6 +14,7 @@ class Event {
         }
         this.state = this._lagan.state;
         this.error = null;
+        this.meta = meta;
     }
     
     get type() { return this.constructor.name; };
@@ -91,12 +92,12 @@ class Lagan extends EventEmitter {
         this._eventstream.listen(this.position, this._listener);
 
         const lagan = this;
-        this.Event = function (props, position) {
+        this.Event = function (props, position, meta) {
             if (typeof props === 'undefined') {
                 props = {};
             }
             this._lagan = lagan;
-            this.init(props, position);
+            this.init(props, position, meta);
         }
         this.Event.prototype = eventParent;
     }
@@ -118,7 +119,7 @@ class Lagan extends EventEmitter {
             return;
         }
 
-        const eventObj = new this._events[event.type](event.props, this.position);
+        const eventObj = new this._events[event.type](event.props, this.position, meta);
 
         let validationResult;
         try {

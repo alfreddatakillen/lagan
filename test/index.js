@@ -377,4 +377,48 @@ describe('lagan()', () => {
 
     });
 
+    describe('event object', () => {
+
+        it('should have meta object a projection and post validation, but not pre validation', () => {
+            const initialState = { users: [] };
+            const l = new Lagan({ initialState });
+            after(() => l.close());
+
+            const calls = [];
+
+            let preValidationMeta;
+            let postValidationMeta;
+            let projectionMeta;
+
+            class UserAdded extends l.Event {
+                validate({ state, position }) {
+                    if (typeof position === 'undefined') {
+                        preValidationMeta = this.meta;
+                    } else {
+                        postValidationMeta = this.meta;
+                    }
+                }
+                project({ state }) {
+                    projectionMeta = this.meta;
+                }
+            }
+
+            l.registerEvent(UserAdded);
+
+            function addUser(name) {
+                return new UserAdded({ name }).apply();
+            }
+
+            return addUser('John Doe', 'john@example.org')
+                .then(() => {
+                    expect(preValidationMeta).to.be.an('undefined');
+                    expect(postValidationMeta).to.be.an('object');
+                    expect(projectionMeta).to.be.an('object');
+                    expect(postValidationMeta.checksum).to.be.a('string');
+                    expect(projectionMeta.checksum).to.be.a('string');
+                });
+        });
+
+    });
+
 });
