@@ -19,7 +19,7 @@ class Event {
     
     get type() { return this.constructor.name; };
 
-    apply () {
+    apply(context) {
         let resolve, reject;
         const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
         
@@ -27,7 +27,7 @@ class Event {
 
         try {
             if (typeof this.validate === 'function') {
-                validatorResult = this.validate({ state: this.state, position: null });
+                validatorResult = this.validate({ state: this.state, position: null, context: context || null });
             }
         } catch(error) {
             this.error = error;
@@ -124,7 +124,7 @@ class Lagan extends EventEmitter {
         let validationResult;
         try {
             if (typeof eventObj.validate === 'function') {
-                validationResult = eventObj.validate({ state: this.state, position: this.position });
+                validationResult = eventObj.validate({ state: this.state, position: this.position, context: null });
             }
         } catch (err) {
             eventObj.error = err;

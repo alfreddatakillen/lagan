@@ -112,6 +112,29 @@ describe('lagan()', () => {
 
     describe('validation', () => {
 
+        it('should have access to context during prevalidation if it was passed to apply()', () => {
+            const initialState = { users: [] };
+            const l = new Lagan({ initialState });
+            after(() => l.close());
+            const calls = [];
+            class UserAdded extends l.Event {
+                validate({ state, position, context }) {
+                    calls.push(context);
+                }
+                project({ state }) {
+                    return { ...state, users: [ ...state.users, { name: this.props.name, email: this.props.email } ] };
+                }
+            }
+            l.registerEvent(UserAdded);
+            function addUser(name, email) {
+                return new UserAdded({ name, email }).apply('testcontext');
+            }
+            return addUser('John Doe', 'john@example.org')
+                .then(() => {
+                    expect(calls).to.deep.equal([ 'testcontext', null ]);
+                });
+        });
+
         it('should run twice on a successful command, first without position number, and then with one', () => {
             const initialState = { users: [] };
             const l = new Lagan({ initialState });

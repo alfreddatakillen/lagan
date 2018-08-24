@@ -129,14 +129,18 @@ the event will be projected to the state.
 
 ### Distinguish pre-validation from post-validation
 
-The `validate()` function will be called with two aruments: `state` and `position`.
+The `validate()` function will be called with three aruments: `state`, `position` and
+`context`.
 
 During pre-validation, `state` is just the latest state that Lagan currently knows of,
 and `position` is null, since the event has not been written to the event stream yet,
-so it does not have a position so far.
+so it does not have a position so far. If an argument was passed to the `.apply()`
+function of your event object (the `Event` class object), that argument is in the
+`context` argument of your `validate()` function.
 
 During post-validation, `state` is the state when all event before this event has been
 projected, and `position` is the position number of this event in the event stream.
+The `context` is always `null` during post-validation.
 
 A good way to distinguish pre-validation from post-validation is to check if `position`
 is `null`.
