@@ -109,7 +109,8 @@ class Lagan extends EventEmitter {
             throw new Error('Lagan will only restart when using temporary logFile.');
         }
         return new Promise((resolve, reject) => {
-            this._eventstream.onDrain(() => {
+
+            const drainFn = () => {
                 this._eventstream.pause();
                 this._eventstream.removeAllOnDrainListeners();
                 this._eventstream.removeAllListeners();
@@ -118,7 +119,13 @@ class Lagan extends EventEmitter {
                 this._eventstream.listen(0, this._listener);
                 this.state = newState || this._opts.initialState || null;
                 resolve();
-            });
+            };
+
+            if (this._eventstream.isDrained) {
+                drainFn();
+            } else {
+                this._eventstream.onDrain(drainFn);
+            }
         });
     }
 
