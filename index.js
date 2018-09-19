@@ -79,6 +79,8 @@ class Lagan extends EventEmitter {
 
         super();
 
+        this._opts = opts;
+
         this._eventstream = new XStreem(opts.logFile);
         this._events = {};
         this._listeners = {};
@@ -100,6 +102,24 @@ class Lagan extends EventEmitter {
             this.init(props, position, meta);
         }
         this.Event.prototype = eventParent;
+    }
+
+    restart(newState) {
+        if (this._opts.logFile) {
+            throw new Error('Lagan will only restart when using temporary logFile.');
+        }
+        return new Promise((resolve, reject) => {
+            this._eventstream.onDrain(() => {
+                this._eventstream.pause();
+                this._eventstream.removeAllOnDrainListeners();
+                this._eventstream.removeAllListeners();
+                this.position = 0;
+                this._eventstream = new XStreem();
+                this._eventstream.listen(0, this._listener);
+                this.state = newState || this._opts.initialState || null;
+                resolve();
+            });
+        });
     }
 
     _eventHandler(pos, event, meta) {

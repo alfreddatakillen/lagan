@@ -1,15 +1,15 @@
 {
   "name": "lagan",
-  "version": "0.0.6",
-  "description": "Simple module for CQRS and event sourced state handling",
+  "version": "0.0.7",
+  "description": "Simple module for event sourcing in node.js",
   "main": "index.js",
   "scripts": {
     "test": "NODE_ENV=test node_modules/.bin/mocha test/**/*.js"
   },
   "author": "Alfred Godoy <alfred@nurd.nu>",
-  "license": "(ISC OR GPL-3.0)",
+  "license": "ISC",
   "dependencies": {
-    "xstreem": "^2.2.1"
+    "xstreem": "^2.3.1"
   },
   "devDependencies": {
     "chai": "^4.1.2",

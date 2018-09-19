@@ -444,4 +444,88 @@ describe('lagan()', () => {
 
     });
 
+    describe('restarting', () => {
+
+        it('should start over at position 0 with an empty event stream', function () {
+           
+            this.timeout(20000);
+
+            const l = new Lagan({ initialState: {} });
+            after(() => l.close());
+
+            class UserAdded extends l.Event {
+                validate({ state, position }) {
+                }
+                project({ position, state }) {
+                    return {
+                        ...state,
+                        calls: [
+                            ...(state.calls || []),
+                            {
+                                name: this.props.name,
+                                position
+                            }
+                        ]
+                    }
+                }
+            }
+            l.registerEvent(UserAdded);
+
+            function addUser(name) {
+                return new UserAdded({ name }).apply();
+            }
+
+            return addUser('John Doe')
+                .then(() => {
+                    expect(l.state).to.deep.equal({
+                        calls: [
+                            { name: 'John Doe', position: 0 }
+                        ]
+                    });
+                    return addUser('Jane Doe');
+                })
+                .then(() => {
+                    expect(l.state).to.deep.equal({
+                        calls: [
+                            { name: 'John Doe', position: 0 },
+                            { name: 'Jane Doe', position: 1 }
+                        ]
+                    });
+                    return addUser('Johnny Moe');
+                })
+                .then(() => {
+                    expect(l.state).to.deep.equal({
+                        calls: [
+                            { name: 'John Doe', position: 0 },
+                            { name: 'Jane Doe', position: 1 },
+                            { name: 'Johnny Moe', position: 2 }
+                        ]
+                    });
+                    return l.restart();
+                })
+                .then(() => {
+                    expect(l.state).to.deep.equal({});
+                    return addUser('Bonny Moe');
+                })
+                .then(() => {
+                    expect(l.state).to.deep.equal({
+                        calls: [
+                            { name: 'Bonny Moe', position: 0 }
+                        ]
+                    });
+                    return addUser('Martin Moe');
+                })
+                .then(() => {
+                    expect(l.state).to.deep.equal({
+                        calls: [
+                            { name: 'Bonny Moe', position: 0 },
+                            { name: 'Martin Moe', position: 1 }
+                        ]
+                    });
+                });
+
+        });
+
+    });
+
 });
